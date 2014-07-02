@@ -35,6 +35,10 @@ TARGET_ARCH_VARIANT := armv5te
 endif
 
 ifeq ($(strip $(TARGET_GCC_VERSION_EXP)),)
+<<<<<<< HEAD
+#TARGET_GCC_VERSION := 4.7
+=======
+>>>>>>> parent of 31f71cf... JustArchi's ArchiDroid Optimizations V3.1
 TARGET_GCC_VERSION := 4.7
 else
 TARGET_GCC_VERSION := $(TARGET_GCC_VERSION_EXP)
