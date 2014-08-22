@@ -35,7 +35,7 @@ TARGET_ARCH_VARIANT := armv5te
 endif
 
 ifeq ($(strip $(TARGET_GCC_VERSION_EXP)),)
-TARGET_GCC_VERSION := 4.7
+TARGET_GCC_VERSION := 4.8
 else
 TARGET_GCC_VERSION := $(TARGET_GCC_VERSION_EXP)
 endif
@@ -67,17 +67,38 @@ else
 endif
 
 TARGET_NO_UNDEFINED_LDFLAGS := -Wl,--no-undefined
+OPT_MEM := -fgcse-las
 
-TARGET_arm_CFLAGS :=    -O2 \
-                        -fomit-frame-pointer \
-                        -fstrict-aliasing    \
-                        -funswitch-loops
+TARGET_arm_CFLAGS :=    -O3 \
+                         -fomit-frame-pointer \
+                         -fstrict-aliasing    \
+        		 -fno-tree-vectorize \
+                         -funsafe-loop-optimizations \
+                         -Wstrict-aliasing \
+			 -Werror=strict-aliasing
 
 # Modules can choose to compile some source as thumb.
 TARGET_thumb_CFLAGS :=  -mthumb \
                         -Os \
                         -fomit-frame-pointer \
-                        -fno-strict-aliasing
+                        -funsafe-math-optimizations \
+			-fstrict-aliasing \
+                        -Wstrict-aliasing \
+                        -Werror=strict-aliasing
+
+ifdef OPT_MEMORY
+TARGET_arm_CFLAGS += $(OPT_MEM)
+endif
+
+ifneq ($(filter 4.8 4.8.% 4.9 4.9.%, $(TARGET_GCC_VERSION)),)
+TARGET_arm_CFLAGS +=  -Wno-unused-parameter \
+                      -Wno-unused-value \
+                      -Wno-unused-function
+
+TARGET_thumb_CFLAGS +=  -Wno-unused-parameter \
+                        -Wno-unused-value \
+                        -Wno-unused-function
+endif
 
 # Set FORCE_ARM_DEBUGGING to "true" in your buildspec.mk
 # or in your environment to force a full arm build, even for
@@ -89,8 +110,8 @@ TARGET_thumb_CFLAGS :=  -mthumb \
 # with -mlong-calls.  When built at -O0, those libraries are
 # too big for a thumb "BL <label>" to go from one end to the other.
 ifeq ($(FORCE_ARM_DEBUGGING),true)
-  TARGET_arm_CFLAGS += -fno-omit-frame-pointer -fno-strict-aliasing
-  TARGET_thumb_CFLAGS += -marm -fno-omit-frame-pointer
+  TARGET_arm_CFLAGS += -fomit-frame-pointer -fstrict-aliasing
+  TARGET_thumb_CFLAGS += -marm -fomit-frame-pointer
 endif
 
 ifeq ($(TARGET_DISABLE_ARM_PIE),true)
@@ -113,15 +134,22 @@ TARGET_GLOBAL_CFLAGS += \
 			-Werror=format-security \
 			-D_FORTIFY_SOURCE=2 \
 			-fno-short-enums \
+			-fstrict-aliasing \
+                        -Wstrict-aliasing \
+                        -Werror=strict-aliasing \
 			$(arch_variant_cflags) \
 			-include $(android_config_h) \
 			-I $(dir $(android_config_h))
+
+ifdef OPT_MEMORY
+TARGET_arm_CFLAGS += $(OPT_MEM)
+endif
 
 # This warning causes dalvik not to build with gcc 4.6+ and -Werror.
 # We cannot turn it off blindly since the option is not available
 # in gcc-4.4.x.  We also want to disable sincos optimization globally
 # by turning off the builtin sin function.
-ifneq ($(filter 4.6 4.6.% 4.7 4.7.%, $(TARGET_GCC_VERSION)),)
+ifneq ($(filter 4.6 4.6.% 4.7 4.7.% 4.8 4.8.% 4.9 4.9.%, $(TARGET_GCC_VERSION)),)
 TARGET_GLOBAL_CFLAGS += -Wno-unused-but-set-variable -fno-builtin-sin \
 			-fno-strict-volatile-bitfields
 endif
@@ -153,10 +181,15 @@ TARGET_GLOBAL_CPPFLAGS += -fvisibility-inlines-hidden
 TARGET_RELEASE_CFLAGS := \
 			-DNDEBUG \
 			-g \
-			-Wstrict-aliasing=2 \
+			-Wstrict-aliasing \
+			-Werror=strict-aliasing \
 			-fgcse-after-reload \
 			-frerun-cse-after-loop \
 			-frename-registers
+
+ifdef OPT_MEMORY
+TARGET_arm_CFLAGS += $(OPT_MEM)
+endif
 
 libc_root := bionic/libc
 libm_root := bionic/libm
